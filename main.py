@@ -1,12 +1,15 @@
 # Local files
+import datetime as datetime
+
 from database import *
 from ticker import *
 
 # Graphing libraries
-import datetime
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from matplotlib import style
+from datetime import datetime
+import datetime
+
 
 # Set style for matplotlib
 style.use('fivethirtyeight')
@@ -26,9 +29,9 @@ def make_item_list(item):
 
 
 # Good tutorial: https://www.youtube.com/watch?v=pq4nwICEB4U
-def graph_data(new, ticker):
+def graph_data(new, ticker, db):
     # Get ordered lists for times (dates), content (ticker dict)
-    times, content = get_times_content_lists(new)
+    times, content = get_times_content_lists(new, db)
 
     class_list = []
     iterator = 0
@@ -58,7 +61,7 @@ def graph_data(new, ticker):
 
 # Grab and print data_list
 def print_data_list():
-    data_list = grab_data()
+    data_list = grab_data(make_date_string())
     for item in data_list:
         print(item)
 
@@ -66,6 +69,14 @@ def print_data_list():
 if __name__ == '__main__':
     # print_data_list()
 
-    graph_data(True, "GME")  # Graph all data from new posts
-    graph_data(False, "GME")  # Graph all data from hot posts
+    print("Today is " + make_date_string())
+
+    # SEND DATA TO DB
+    collect_data(300, make_date_string())
+
+    # GRAPH DATA
+    # graph_data(True, "GME", make_date_string())  # Graph all data from new posts
+    # graph_data(False, "GME", make_date_string())  # Graph all data from hot posts
+
+
 
