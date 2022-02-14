@@ -3,8 +3,6 @@ import sqlite3
 import requests
 from requests.exceptions import HTTPError
 import time
-from datetime import datetime
-import datetime
 
 
 # Get engine, cursor from SQL database
@@ -21,7 +19,7 @@ def connect_to_db(db):
 
 
 # Insert values into the database
-def send_to_db(json_dict, db):
+def send_to_db(json_dict):
     # Grab values from json_dict
     post_time = json_dict["time_compiled"]
     post_type = str(json_dict["type"])
@@ -32,43 +30,36 @@ def send_to_db(json_dict, db):
     [engine, cursor] = connect_to_db('TickerDb.db')
 
     # Insert values into database
-    cursor.execute("INSERT INTO " + db + " VALUES(?,?,?,?)", (post_time, post_type, posts, content))
+    cursor.execute("INSERT INTO new_data VALUES(?,?,?,?)", (post_time, post_type, posts, content))
     engine.commit()
     engine.close()
 
 
-def make_table(db):
+def make_table():
     [engine, cursor] = connect_to_db('TickerDb.db')
 
     # Initially create SQL table
-    cursor.execute('CREATE TABLE IF NOT EXISTS ' + db + '(time TEXT, type TEXT, posts INTEGER, content TEXT)')
+    cursor.execute('CREATE TABLE new_data(time TEXT, type TEXT, posts INTEGER, content TEXT)')
     engine.commit()
     engine.close()
 
 
-def delete_table(db):
+def delete_table():
     [engine, cursor] = connect_to_db('TickerDb.db')
-    cursor.execute('DROP TABLE ' + db + ';')
+    cursor.execute('DROP TABLE new_data;')
     engine.close()
 
 
 def reset_table():
-    delete_table(make_date_string())
+    delete_table()
     make_table()
 
 
-def grab_data(db):
+def grab_data():
     [engine, cursor] = connect_to_db('TickerDb.db')
-    # cursor.execute('SELECT * FROM ' + db + ' WHERE type="new"')  # Parse hot posts
-    cursor.execute('SELECT * FROM ' + db + ' WHERE type="new"')  # Parse new posts
-
-    # Fetch data
+    cursor.execute('SELECT * FROM new_data WHERE type="new"')  # Parse hot posts
+    # cursor.execute('SELECT * FROM ticker_data WHERE type="new"')  # Parse new posts
     data = cursor.fetchall()
-
-    # Print data
-    for row in cursor:
-        print(row)
-
     engine.close()
 
     return data
@@ -96,13 +87,13 @@ def try_api(link):
 
 
 # Get time, ticker/frequency dict lists
-def get_times_content_lists(new, db):
+def get_times_content_lists(new):
     [engine, cursor] = connect_to_db('TickerDb.db')
 
     if new:
-        cursor.execute('SELECT time, content FROM ' + db + ' WHERE type="new"')
+        cursor.execute('SELECT time, content FROM new_data WHERE type="new"')
     else:
-        cursor.execute('SELECT time, content FROM ' + db + ' WHERE type="hot"')
+        cursor.execute('SELECT time, content FROM new_data WHERE type="hot"')
     times = []
     content = []
 
@@ -114,60 +105,26 @@ def get_times_content_lists(new, db):
 
 
 # Runs an infinite loop that sends API data to the database every 5 mins
-def collect_data(interval, db):
+# Hot: try_api("https://flask-service.bg7bq3bnlj1de.us-east-1.cs.amazonlightsail.com/hot/?subreddit=wallstreetbets&hot=100")
+# New: try_api("https://flask-service.bg7bq3bnlj1de.us-east-1.cs.amazonlightsail.com/new/?subreddit=pennystocks&new=100")
+def run_5m_loop():
     count = 0
     while True:
-        # If it doesn't exist, make a new table
-        make_table(db)
-
-        print(db + " has been updated " + str(count + 1) + " times:")
+        print("TickerDatabase has been updated " + str(count + 1) + " times:")
         # Read and send data from hot posts to DB
-        hot_data = try_api('https://flask-service.bg7bq3bnlj1de.us-east-1.cs.amazonlightsail.com/hot/?hot=100')
-        send_to_db(hot_data, db)
+        hot_data = try_api('https://flask-service.bg7bq3bnlj1de.us-east-1.cs.amazonlightsail.com/hot/?subreddit=wallstreetbets&hot=100')
+        send_to_db(hot_data)
         print("Hot posts scraped: " + str(hot_data))
 
         # Read and send data from new posts to DB
-        new_data = try_api('https://flask-service.bg7bq3bnlj1de.us-east-1.cs.amazonlightsail.com/new/?new=100')
-        send_to_db(new_data, db)
+        new_data = try_api('https://flask-service.bg7bq3bnlj1de.us-east-1.cs.amazonlightsail.com/new/?subreddit=pennystocks&new=100')
+        send_to_db(new_data)
         print("New posts scraped: " + str(new_data))
 
         print("\n")
-        grab_data(db)
+        grab_data()
         print("\n")
 
         count += 1
 
-        time.sleep(interval)
-
-
-# These functions are help create the db table names,
-# which is the date written as a string with words
-def letter_to_word(letter):
-    letter_word_dict = {1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five',
-                        6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine', 10: 'Ten',
-                        11: 'Eleven', 12: 'Twelve', 13: 'Thirteen', 14: 'Fourteen',
-                        15: 'Fifteen', 16: 'Sixteen', 17: 'Seventeen', 18: 'Eighteen',
-                        19: 'Nineteen', 20: 'Twenty', 21: 'TwentyOne', 22: 'TwentyTwo',
-                        23: 'TwentyThree', 24: 'TwentyFour', 25: 'TwentyFive', 26: 'TwentySix',
-                        27: 'TwentySeven', 28: 'TwentyEight', 29: 'TwentyNine', 30: 'Thirty',
-                        31: 'ThirtyOne', 32: 'ThirtyTwo', 40: 'Forty',
-                        50: 'Fifty', 60: 'Sixty', 70: 'Seventy', 80: 'Eighty',
-                        90: 'Ninety', 0: 'Zero'}
-
-    try:
-        return letter_word_dict[letter]
-    except KeyError:
-        try:
-            print(letter_word_dict[letter - letter % 10] + letter_word_dict[letter % 10].lower())
-        except KeyError:
-            print('Error: Number out of range')
-
-
-def make_date_string():
-    date = datetime.datetime.now().strftime("%b %d %Y")
-    month_day_year = date.split(" ")
-    date_string = month_day_year[0] + letter_to_word(int(month_day_year[1])) \
-                  + letter_to_word(int(month_day_year[2][:2])) \
-                  + letter_to_word(int(month_day_year[2][2:]))
-
-    return date_string
+        time.sleep(300)

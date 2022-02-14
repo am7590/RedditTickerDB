@@ -29,9 +29,9 @@ def make_item_list(item):
 
 
 # Good tutorial: https://www.youtube.com/watch?v=pq4nwICEB4U
-def graph_data(new, ticker, db):
+def graph_data(new, ticker):
     # Get ordered lists for times (dates), content (ticker dict)
-    times, content = get_times_content_lists(new, db)
+    times, content = get_times_content_lists(new)
 
     class_list = []
     iterator = 0
@@ -59,24 +59,15 @@ def graph_data(new, ticker, db):
     plt.show()
 
 
-# Grab and print data_list
-def print_data_list():
-    data_list = grab_data(make_date_string())
-    for item in data_list:
-        print(item)
-
-
 if __name__ == '__main__':
-    # print_data_list()
-
-    print("Today is " + make_date_string())
-
     # SEND DATA TO DB
-    collect_data(300, make_date_string())
+    # 300sec = 5 min pause between each API call
+    # make_table() # If using a new table
+    run_5m_loop()
 
     # GRAPH DATA
-    # graph_data(True, "GME", make_date_string())  # Graph all data from new posts
-    # graph_data(False, "GME", make_date_string())  # Graph all data from hot posts
+    # graph_data(True, "GME")  # Graph all data from new posts
+    # graph_data(False, "GME")  # Graph all data from hot posts
 
 
 
